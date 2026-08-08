@@ -8,7 +8,7 @@
 
 ## The prompts that shipped it
 
-These are my raw prompts, verbatim — typos, shorthand and all — in the order I sent them.
+These are the prompts that drove the build, in the order I sent them.
 
 # Backend layer
 1. Scoping the brief
@@ -21,7 +21,7 @@ These are my raw prompts, verbatim — typos, shorthand and all — in the order
 "Scheduler setup: AsyncIOScheduler() in lifespan, but it's running everything on one fixed 60s tick. That's wrong. I want a 15s tick with per-URL logic . And it's APScheduler, not a message queue — that's the right call at this scale, keep it."
 
 4. Endpoint design
-"main.py has too many handlers and GET /urls/{id}/checks + GET /urls/{id} are redundant — collapse them into one. Each endpoint should have exactly one responsibility."
+"GET /urls/{id} and GET /urls/{id}/checks look redundant to me. Justify keeping both or collapse them — every endpoint should have exactly one responsibility."
 
 5. Per-URL intervals actually working
 " Fix the scheduling model so each URL respects its own interval, then verify it."
@@ -33,22 +33,20 @@ These are my raw prompts, verbatim — typos, shorthand and all — in the order
 "Build all three: the table/list view, SSL expiry monitoring, and the down-alert webhook."
 
 # Frontend UI layer
-8. Sparkline chart
-"Sparkline chart on each card — data from the check history endpoint, drawn inline, no chart library that drags in dependencies we don't need. Implement it clean."
 
-9. Polling
+8. Polling
 "Drop dashboard polling to 2s. Status changes should feel near-real-time ."
 
-10. Rejecting the redesign
+9. Rejecting the redesign
 "Revert this. The 'sample data' fallback giving fake numbers when the backend is down —inventing green marks is worse than one that shows nothing."
 
-11. Layout grounded in real data
+10. Layout grounded in real data
 "'Avg uptime' maps to nothing in our API, SSL data is buried at the bottom. Rebuild it — every metric backed by data the API actually returns, and the add-URL input goes at the top."
 
-12. Scannability at 15 URLs
+11. Scannability at 15 URLs
 "Design for 15 URLs, not 5. Sort monitors down , failing endpoint is always at the top, and preserve creation order within each group so healthy cards don't reshuffle on every poll."
 
-13. Readability pass
+12. Readability pass
 "Remove the manual refresh button — we already poll every 2s.  Raise border/background contrast on cards and the table. Replace 'Avg response' with 'Slowest monitor' — that names the actual problem. 'Check now' becomes a real bordered button. Make everything scannable."
 
 
