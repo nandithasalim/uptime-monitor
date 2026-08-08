@@ -19,6 +19,15 @@ class CheckOut(BaseModel):
     checked_at: datetime
 
 
+class IncidentOut(BaseModel):
+    """The most recent up<->down transition for a URL. `is_up` is the state it
+    transitioned TO: False means "went down at changed_at" (down since then, if
+    still down), True means "recovered at changed_at"."""
+
+    changed_at: datetime
+    is_up: bool
+
+
 class URLOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -29,3 +38,4 @@ class URLOut(BaseModel):
     created_at: datetime
     latest_check: CheckOut | None = None
     uptime_percent_24h: float | None = None
+    last_incident: IncidentOut | None = None

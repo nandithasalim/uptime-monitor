@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .checker import check_all_urls, ping_url
 from .database import get_db, init_db
 from .models import Check, URL
-from .schemas import CheckOut, URLCreate, URLOut
+from .schemas import CheckOut, IncidentOut, URLCreate, URLOut
 
 scheduler = AsyncIOScheduler()
 
@@ -18,7 +18,12 @@ scheduler = AsyncIOScheduler()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
-    scheduler.add_job(check_all_urls, "interval", seconds=60, id="check_all_urls")
+    # Tick every 15s and let check_all_urls() decide, per URL, whether that URL's
+    # own check_interval_seconds has actually elapsed. Ticking faster than the
+    # default 60s interval is what makes a URL configured for e.g. 30s actually
+    # get checked that often, instead of everything being locked to one global
+    # 60s cadence regardless of what each URL is set to.
+    scheduler.add_job(check_all_urls, "interval", seconds=15, id="check_all_urls")
     scheduler.start()
     yield
     scheduler.shutdown()
@@ -107,6 +112,29 @@ async def check_now(url_id: int, db: AsyncSession = Depends(get_db)):
     return await _to_url_out(url_id, db)
 
 
+async def _get_last_incident(db: AsyncSession, url_id: int) -> IncidentOut | None:
+    """Find the most recent moment this URL's status flipped (up->down or
+    down->up)"""
+    result = await db.execute(
+        select(Check.checked_at, Check.is_up)
+        .where(Check.url_id == url_id)
+        .order_by(Check.checked_at.asc())
+        .limit(200)
+    )
+    rows = result.all()
+
+    last_transition = None
+    prev_is_up = None
+    for checked_at, is_up in rows:
+        if prev_is_up is not None and is_up != prev_is_up:
+            last_transition = (checked_at, is_up)
+        prev_is_up = is_up
+
+    if last_transition is None:
+        return None
+    return IncidentOut(changed_at=last_transition[0], is_up=last_transition[1])
+
+
 async def _to_url_out(url_id: int, db: AsyncSession, preloaded: URL | None = None) -> URLOut:
     url = preloaded or await db.get(URL, url_id)
 
@@ -127,6 +155,7 @@ async def _to_url_out(url_id: int, db: AsyncSession, preloaded: URL | None = Non
     )
     up = up_result.scalar_one()
     uptime_pct = round((up / total) * 100, 1) if total > 0 else None
+    last_incident = await _get_last_incident(db, url_id)
 
     return URLOut(
         id=url.id,
@@ -136,4 +165,5 @@ async def _to_url_out(url_id: int, db: AsyncSession, preloaded: URL | None = Non
         created_at=url.created_at,
         latest_check=CheckOut.model_validate(latest) if latest else None,
         uptime_percent_24h=uptime_pct,
+        last_incident=last_incident,
     )
