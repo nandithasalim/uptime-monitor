@@ -11,37 +11,37 @@ function KpiCard({ label, value, unit, sub, tone = "default" }) {
       ? "text-rose-400"
       : tone === "warn"
       ? "text-amber-400"
-      : "text-slate-50";
+      : "text-white";
   return (
-    <div className="rounded-2xl border border-[#1b2320] bg-[#0d1211] px-5 py-4">
-      <div className="text-[10px] font-medium uppercase tracking-[0.18em] text-slate-500">
+    <div className="rounded-2xl border border-[#2a3733] bg-[#111917] px-5 py-4">
+      <div className="text-xs font-medium uppercase tracking-[0.14em] text-slate-400">
         {label}
       </div>
       <div className="mt-3 flex items-baseline gap-1.5">
         <span className={`font-mono text-3xl font-medium tabular-nums ${toneClass}`}>
           {value}
         </span>
-        {unit && <span className="font-mono text-sm text-slate-500">{unit}</span>}
+        {unit && <span className="font-mono text-sm text-slate-400">{unit}</span>}
       </div>
-      {sub && <div className="mt-1 truncate text-xs text-slate-600">{sub}</div>}
+      {sub && <div className="mt-1.5 truncate text-xs text-slate-400">{sub}</div>}
     </div>
   );
 }
 
 function SkeletonCard() {
   return (
-    <div className="animate-pulse rounded-2xl border border-[#1b2320] bg-[#0d1211] p-5">
-      <div className="h-5 w-1/3 rounded bg-[#1b2320]" />
-      <div className="mt-2 h-3 w-1/2 rounded bg-[#1b2320]" />
+    <div className="animate-pulse rounded-2xl border border-[#2a3733] bg-[#111917] p-5">
+      <div className="h-5 w-1/3 rounded bg-[#2a3733]" />
+      <div className="mt-2 h-3 w-1/2 rounded bg-[#2a3733]" />
       <div className="mt-6 grid grid-cols-4 gap-3">
         {[0, 1, 2, 3].map((i) => (
           <div key={i}>
-            <div className="h-2 w-10 rounded bg-[#1b2320]" />
-            <div className="mt-2 h-5 w-12 rounded bg-[#1b2320]" />
+            <div className="h-2 w-10 rounded bg-[#2a3733]" />
+            <div className="mt-2 h-5 w-12 rounded bg-[#2a3733]" />
           </div>
         ))}
       </div>
-      <div className="mt-5 h-24 rounded bg-[#1b2320]/60" />
+      <div className="mt-5 h-24 rounded bg-[#2a3733]/60" />
     </div>
   );
 }
@@ -128,13 +128,14 @@ export default function App() {
   const downCount = urls.filter((u) => u.latest_check && !u.latest_check.is_up).length;
   const allUp = urls.length > 0 && downCount === 0;
 
+  // Slowest responding monitor — more actionable than an average across
+  // unrelated endpoints, because it names the one service that's degrading.
   const responding = urls.filter(
     (u) => u.latest_check?.is_up && u.latest_check.response_time_ms != null
   );
-  const avgResponse = responding.length
-    ? Math.round(
-        responding.reduce((sum, u) => sum + u.latest_check.response_time_ms, 0) /
-          responding.length
+  const slowest = responding.length
+    ? responding.reduce((a, b) =>
+        a.latest_check.response_time_ms > b.latest_check.response_time_ms ? a : b
       )
     : null;
 
@@ -155,107 +156,65 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#070a09] text-slate-100">
       <div className="grid-backdrop">
-        <div className="mx-auto max-w-6xl px-6 pb-10 pt-8">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-emerald-500/10 ring-1 ring-emerald-500/20">
-                <svg
-                  className="h-5 w-5 text-emerald-400"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-                </svg>
-              </div>
-              <span className="text-xl font-semibold tracking-tight">Pulsewatch</span>
+        <div className="mx-auto max-w-6xl px-6 pb-10 pt-14">
+          {urls.length > 0 && (
+            <div
+              className={`inline-flex items-center gap-2.5 rounded-full border px-4 py-2 text-sm font-medium ${
+                allUp
+                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                  : "border-rose-500/40 bg-rose-500/10 text-rose-300"
+              }`}
+            >
+              <span className="relative flex h-2 w-2">
+                {allUp && (
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                )}
+                <span
+                  className={`relative inline-flex h-2 w-2 rounded-full ${
+                    allUp ? "bg-emerald-400" : "bg-rose-500"
+                  }`}
+                />
+              </span>
+              {allUp
+                ? "All systems operational"
+                : `${downCount} of ${urls.length} monitor${urls.length === 1 ? "" : "s"} down`}
             </div>
+          )}
 
-            <div className="flex items-center gap-2">
-              <button
-                onClick={loadUrls}
-                className="flex items-center gap-2 rounded-full border border-[#1b2320] px-4 py-2 text-sm text-slate-400 transition-colors hover:text-slate-100"
+          <h1 className="mt-8 max-w-3xl text-5xl font-bold leading-[1.08] tracking-tight sm:text-6xl">
+            Know the second
+            <br />
+            something breaks.
+          </h1>
+
+          <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-400">
+            Probes every endpoint you ship, tracks response time and SSL expiry, and fires a
+            webhook the moment status flips.
+          </p>
+
+          <div className="mt-8 flex flex-wrap gap-3">
+            <button
+              onClick={() => scrollTo(formRef, true)}
+              className="flex items-center gap-2 rounded-full bg-emerald-400 px-6 py-3 text-sm font-semibold text-[#052e1a] transition-colors hover:bg-emerald-300"
+            >
+              <svg
+                className="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
               >
-                <svg
-                  className="h-4 w-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M23 4v6h-6M1 20v-6h6" />
-                  <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
-                </svg>
-                Refresh
-              </button>
-            </div>
-          </div>
-
-          <div className="pb-4 pt-16">
-            {urls.length > 0 && (
-              <div
-                className={`inline-flex items-center gap-2.5 rounded-full border px-4 py-2 text-sm ${
-                  allUp
-                    ? "border-emerald-500/25 bg-emerald-500/5 text-emerald-400"
-                    : "border-rose-500/25 bg-rose-500/5 text-rose-400"
-                }`}
-              >
-                <span className="relative flex h-2 w-2">
-                  {allUp && (
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                  )}
-                  <span
-                    className={`relative inline-flex h-2 w-2 rounded-full ${
-                      allUp ? "bg-emerald-400" : "bg-rose-500"
-                    }`}
-                  />
-                </span>
-                {allUp
-                  ? "All systems operational"
-                  : `${downCount} of ${urls.length} monitor${urls.length === 1 ? "" : "s"} down`}
-              </div>
-            )}
-
-            <h1 className="mt-8 max-w-3xl text-5xl font-bold leading-[1.08] tracking-tight sm:text-6xl">
-              Know the second
-              <br />
-              something breaks.
-            </h1>
-
-            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-500">
-              Pulsewatch probes every endpoint you ship, tracks response time and SSL expiry,
-              and fires a webhook the moment status flips.
-            </p>
-
-            <div className="mt-8 flex flex-wrap gap-3">
-              <button
-                onClick={() => scrollTo(formRef, true)}
-                className="flex items-center gap-2 rounded-full bg-emerald-400 px-6 py-3 text-sm font-semibold text-[#052e1a] transition-colors hover:bg-emerald-300"
-              >
-                <svg
-                  className="h-4 w-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                >
-                  <path d="M12 5v14M5 12h14" />
-                </svg>
-                Add monitor
-              </button>
-              <button
-                onClick={() => scrollTo(listRef, false)}
-                className="rounded-full border border-[#1b2320] px-6 py-3 text-sm font-medium text-slate-300 transition-colors hover:border-[#2a3531] hover:text-white"
-              >
-                View dashboard
-              </button>
-            </div>
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              Add monitor
+            </button>
+            <button
+              onClick={() => scrollTo(listRef, false)}
+              className="rounded-full border border-[#2a3733] px-6 py-3 text-sm font-medium text-slate-200 transition-colors hover:border-[#3b4a45] hover:text-white"
+            >
+              View dashboard
+            </button>
           </div>
 
           {urls.length > 0 && (
@@ -272,10 +231,10 @@ export default function App() {
                 />
               ) : (
                 <KpiCard
-                  label="Avg response"
-                  value={avgResponse !== null ? avgResponse : "—"}
-                  unit={avgResponse !== null ? "ms" : null}
-                  sub={responding.length ? `across ${responding.length} up` : "nothing responding"}
+                  label="Slowest"
+                  value={slowest ? Math.round(slowest.latest_check.response_time_ms) : "—"}
+                  unit={slowest ? "ms" : null}
+                  sub={slowest ? slowest.name : "nothing responding"}
                 />
               )}
             </div>
@@ -287,13 +246,13 @@ export default function App() {
         <form
           ref={formRef}
           onSubmit={handleSubmit}
-          className="scroll-mt-6 rounded-2xl border border-[#1b2320] bg-[#0d1211] p-5"
+          className="scroll-mt-6 rounded-2xl border border-[#2a3733] bg-[#111917] p-5"
         >
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1.5fr_auto_auto]">
             <div>
               <label
                 htmlFor="monitor-name"
-                className="mb-2 block text-[10px] font-medium uppercase tracking-[0.18em] text-slate-500"
+                className="mb-2 block text-xs font-medium uppercase tracking-[0.14em] text-slate-400"
               >
                 Name
               </label>
@@ -304,13 +263,13 @@ export default function App() {
                 placeholder="Core API"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full rounded-xl border border-[#1b2320] bg-[#0a0f0e] px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:border-emerald-500/60 focus:outline-none"
+                className="w-full rounded-xl border border-[#2a3733] bg-[#0a0f0e] px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:border-emerald-400 focus:outline-none"
               />
             </div>
             <div>
               <label
                 htmlFor="monitor-url"
-                className="mb-2 block text-[10px] font-medium uppercase tracking-[0.18em] text-slate-500"
+                className="mb-2 block text-xs font-medium uppercase tracking-[0.14em] text-slate-400"
               >
                 URL
               </label>
@@ -320,13 +279,13 @@ export default function App() {
                 placeholder="https://example.com"
                 value={form.url}
                 onChange={(e) => setForm({ ...form, url: e.target.value })}
-                className="w-full rounded-xl border border-[#1b2320] bg-[#0a0f0e] px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:border-emerald-500/60 focus:outline-none"
+                className="w-full rounded-xl border border-[#2a3733] bg-[#0a0f0e] px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:border-emerald-400 focus:outline-none"
               />
             </div>
             <div>
               <label
                 htmlFor="monitor-interval"
-                className="mb-2 block text-[10px] font-medium uppercase tracking-[0.18em] text-slate-500"
+                className="mb-2 block text-xs font-medium uppercase tracking-[0.14em] text-slate-400"
               >
                 Interval
               </label>
@@ -334,7 +293,7 @@ export default function App() {
                 id="monitor-interval"
                 value={form.check_interval_seconds}
                 onChange={(e) => setForm({ ...form, check_interval_seconds: e.target.value })}
-                className="w-full rounded-xl border border-[#1b2320] bg-[#0a0f0e] px-4 py-2.5 text-sm text-slate-100 focus:border-emerald-500/60 focus:outline-none"
+                className="w-full rounded-xl border border-[#2a3733] bg-[#0a0f0e] px-4 py-2.5 text-sm text-white focus:border-emerald-400 focus:outline-none"
               >
                 <option value={30}>Every 30s</option>
                 <option value={60}>Every 1 min</option>
@@ -355,7 +314,7 @@ export default function App() {
           <button
             type="button"
             onClick={() => setShowAdvanced((v) => !v)}
-            className="mt-3 text-xs text-slate-500 transition-colors hover:text-slate-300"
+            className="mt-3 text-xs font-medium text-slate-400 transition-colors hover:text-emerald-400"
           >
             {showAdvanced ? "− Hide" : "+ Add"} alert webhook (optional)
           </button>
@@ -364,7 +323,7 @@ export default function App() {
             <div className="mt-3">
               <label
                 htmlFor="monitor-webhook"
-                className="mb-2 block text-[10px] font-medium uppercase tracking-[0.18em] text-slate-500"
+                className="mb-2 block text-xs font-medium uppercase tracking-[0.14em] text-slate-400"
               >
                 Alert webhook
               </label>
@@ -374,41 +333,41 @@ export default function App() {
                 placeholder="https://hooks.example.com/… — gets a POST when this URL goes down or recovers"
                 value={form.webhook_url}
                 onChange={(e) => setForm({ ...form, webhook_url: e.target.value })}
-                className="w-full rounded-xl border border-[#1b2320] bg-[#0a0f0e] px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:border-emerald-500/60 focus:outline-none"
+                className="w-full rounded-xl border border-[#2a3733] bg-[#0a0f0e] px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:border-emerald-400 focus:outline-none"
               />
             </div>
           )}
         </form>
 
         {error && (
-          <div className="mt-4 rounded-xl border border-rose-900/60 bg-rose-950/40 px-4 py-3 text-sm text-rose-300">
+          <div className="mt-4 rounded-xl border border-rose-500/50 bg-rose-950/50 px-4 py-3 text-sm text-rose-200">
             {error}
           </div>
         )}
 
         <div ref={listRef} className="mt-10 scroll-mt-6">
           {urls.length > 0 && (
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <h2 className="text-sm font-medium uppercase tracking-[0.14em] text-slate-400">
                 Monitors
               </h2>
-              <div className="flex gap-2">
+              <div className="flex gap-1 rounded-xl border border-[#2a3733] bg-[#111917] p-1">
                 <button
                   onClick={() => setView("cards")}
-                  className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
+                  className={`rounded-lg px-5 py-2 text-sm font-medium transition-colors ${
                     view === "cards"
-                      ? "bg-emerald-400/10 text-emerald-400"
-                      : "text-slate-500 hover:text-slate-300"
+                      ? "bg-emerald-400 text-[#052e1a]"
+                      : "text-slate-300 hover:text-white"
                   }`}
                 >
                   Cards
                 </button>
                 <button
                   onClick={() => setView("table")}
-                  className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
+                  className={`rounded-lg px-5 py-2 text-sm font-medium transition-colors ${
                     view === "table"
-                      ? "bg-emerald-400/10 text-emerald-400"
-                      : "text-slate-500 hover:text-slate-300"
+                      ? "bg-emerald-400 text-[#052e1a]"
+                      : "text-slate-300 hover:text-white"
                   }`}
                 >
                   Table
@@ -423,7 +382,7 @@ export default function App() {
               <SkeletonCard />
             </div>
           ) : urls.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[#1b2320] py-16 text-center text-slate-500">
+            <div className="rounded-2xl border border-dashed border-[#2a3733] py-16 text-center text-slate-400">
               No monitors yet. Add one above to start watching an endpoint.
             </div>
           ) : view === "table" ? (

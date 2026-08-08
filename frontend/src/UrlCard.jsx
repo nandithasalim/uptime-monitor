@@ -16,13 +16,13 @@ function Stat({ label, value, tone = "default" }) {
       ? "text-rose-400"
       : tone === "warn"
       ? "text-amber-400"
-      : "text-slate-100";
+      : "text-white";
   return (
     <div>
-      <div className="text-[10px] font-medium uppercase tracking-[0.16em] text-slate-500">
+      <div className="text-xs font-medium uppercase tracking-[0.12em] text-slate-400">
         {label}
       </div>
-      <div className={`mt-1.5 font-mono text-lg font-medium tabular-nums ${toneClass}`}>
+      <div className={`mt-1.5 font-mono text-xl font-medium tabular-nums ${toneClass}`}>
         {value}
       </div>
     </div>
@@ -74,37 +74,37 @@ export default function UrlCard({ url, onDelete }) {
   const sslValue = sslDays == null ? "—" : sslDays < 0 ? "Expired" : `${sslDays}d`;
   const sslTone = sslDays == null ? "default" : sslDays <= 14 ? "warn" : "default";
 
-  const accent = !hasData ? "bg-slate-600" : isUp ? "bg-emerald-400" : "bg-rose-500";
-  const chartColor = !hasData ? "#64748b" : isUp ? "#34d399" : "#fb7185";
+  const accent = !hasData ? "bg-slate-500" : isUp ? "bg-emerald-400" : "bg-rose-500";
+  const chartColor = !hasData ? "#94a3b8" : isUp ? "#34d399" : "#fb7185";
   const gradientId = `grad-${url.id}`;
 
   return (
     <div
       className={`relative overflow-hidden rounded-2xl border transition-colors ${
         hasData && !isUp
-          ? "border-rose-900/50 bg-gradient-to-br from-rose-950/30 to-[#0d1211]"
-          : "border-[#1b2320] bg-[#0d1211]"
+          ? "border-rose-500/50 bg-[#1a1113]"
+          : "border-[#2a3733] bg-[#111917]"
       }`}
     >
-      <div className={`absolute inset-y-0 left-0 w-[3px] ${accent}`} />
+      <div className={`absolute inset-y-0 left-0 w-1 ${accent}`} />
 
       <div className="p-5 pl-6">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="relative flex h-2 w-2 shrink-0">
+              <span className="relative flex h-2.5 w-2.5 shrink-0">
                 {hasData && isUp && (
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                 )}
-                <span className={`relative inline-flex h-2 w-2 rounded-full ${accent}`} />
+                <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${accent}`} />
               </span>
-              <h3 className="truncate text-lg font-semibold text-slate-50">{url.name}</h3>
+              <h3 className="truncate text-lg font-semibold text-white">{url.name}</h3>
             </div>
             <a
               href={url.url}
               target="_blank"
               rel="noreferrer"
-              className="mt-1 block truncate text-sm text-slate-500 hover:text-slate-300 hover:underline"
+              className="mt-1 block truncate text-sm text-slate-400 hover:text-emerald-400 hover:underline"
             >
               {url.url}
             </a>
@@ -112,19 +112,19 @@ export default function UrlCard({ url, onDelete }) {
 
           <div className="flex shrink-0 items-center gap-2">
             <span
-              className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider ${
+              className={`rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider ${
                 !hasData
-                  ? "bg-slate-800 text-slate-400"
+                  ? "bg-slate-700 text-slate-200"
                   : isUp
-                  ? "bg-emerald-400/10 text-emerald-400"
-                  : "bg-rose-500/10 text-rose-400"
+                  ? "bg-emerald-400/20 text-emerald-300"
+                  : "bg-rose-500/20 text-rose-300"
               }`}
             >
               {!hasData ? "Pending" : isUp ? "Up" : "Down"}
             </span>
             <button
               onClick={() => onDelete(url.id)}
-              className="text-slate-600 transition-colors hover:text-rose-400"
+              className="text-slate-400 transition-colors hover:text-rose-400"
               title="Remove monitor"
               aria-label={`Remove ${url.name}`}
             >
@@ -161,7 +161,7 @@ export default function UrlCard({ url, onDelete }) {
               <AreaChart data={history} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
                 <defs>
                   <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={chartColor} stopOpacity={0.35} />
+                    <stop offset="0%" stopColor={chartColor} stopOpacity={0.4} />
                     <stop offset="100%" stopColor={chartColor} stopOpacity={0} />
                   </linearGradient>
                 </defs>
@@ -169,11 +169,11 @@ export default function UrlCard({ url, onDelete }) {
                 <Tooltip
                   contentStyle={{
                     background: "#0a0f0e",
-                    border: "1px solid #1b2320",
+                    border: "1px solid #2a3733",
                     borderRadius: 8,
                     fontSize: 12,
                   }}
-                  labelStyle={{ color: "#94a3b8" }}
+                  labelStyle={{ color: "#cbd5e1" }}
                   formatter={(value) => [`${Math.round(value)} ms`, "response time"]}
                 />
                 <Area
@@ -188,16 +188,22 @@ export default function UrlCard({ url, onDelete }) {
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex h-full items-center justify-center text-xs text-slate-600">
+            <div className="flex h-full items-center justify-center text-sm text-slate-500">
               Collecting data…
             </div>
           )}
         </div>
 
+        {hasData && !isUp && latest.error && (
+          <div className="mt-3 truncate text-sm text-rose-300" title={latest.error}>
+            {latest.error}
+          </div>
+        )}
+
         {url.last_incident && (
           <div
-            className={`mt-3 text-xs ${
-              url.last_incident.is_up ? "text-slate-500" : "text-rose-400"
+            className={`mt-2 text-sm ${
+              url.last_incident.is_up ? "text-slate-400" : "text-rose-300"
             }`}
           >
             {url.last_incident.is_up
@@ -207,24 +213,22 @@ export default function UrlCard({ url, onDelete }) {
         )}
       </div>
 
-      <div className="flex items-center justify-between border-t border-[#1b2320] px-6 py-3 text-xs text-slate-500">
-        <span>{formatInterval(url.check_interval_seconds)}</span>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleCheckNow}
-            disabled={checkingNow}
-            className="transition-colors hover:text-emerald-400 disabled:opacity-50"
-          >
-            {checkingNow ? "Checking…" : "Check now"}
-          </button>
-          <span className="tabular-nums">
-            {hasData && !isUp && latest.error
-              ? latest.error.slice(0, 36)
-              : hasData
-              ? `Checked ${new Date(latest.checked_at).toLocaleTimeString()}`
-              : "No checks yet"}
-          </span>
+      <div className="flex items-center justify-between gap-3 border-t border-[#2a3733] px-6 py-3">
+        <div className="min-w-0 text-sm text-slate-400">
+          <span>{formatInterval(url.check_interval_seconds)}</span>
+          {hasData && (
+            <span className="ml-2 tabular-nums text-slate-500">
+              · {new Date(latest.checked_at).toLocaleTimeString()}
+            </span>
+          )}
         </div>
+        <button
+          onClick={handleCheckNow}
+          disabled={checkingNow}
+          className="shrink-0 rounded-lg border border-[#3b4a45] px-4 py-1.5 text-sm font-medium text-emerald-400 transition-colors hover:border-emerald-400 hover:bg-emerald-400/10 disabled:opacity-50"
+        >
+          {checkingNow ? "Checking…" : "Check now"}
+        </button>
       </div>
     </div>
   );
