@@ -6,7 +6,7 @@ export default function App() {
   const [urls, setUrls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [form, setForm] = useState({ name: "", url: "" });
+  const [form, setForm] = useState({ name: "", url: "", check_interval_seconds: 60 });
   const [submitting, setSubmitting] = useState(false);
 
   const loadUrls = useCallback(async () => {
@@ -34,8 +34,12 @@ export default function App() {
     try {
       let url = form.url.trim();
       if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
-      await api.createUrl({ name: form.name.trim(), url });
-      setForm({ name: "", url: "" });
+      await api.createUrl({
+        name: form.name.trim(),
+        url,
+        check_interval_seconds: Number(form.check_interval_seconds),
+      });
+      setForm({ name: "", url: "", check_interval_seconds: 60 });
       await loadUrls();
     } catch (e) {
       setError("Failed to add URL. Check the console for details.");
@@ -92,6 +96,15 @@ export default function App() {
             onChange={(e) => setForm({ ...form, url: e.target.value })}
             className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm placeholder-slate-500 focus:border-sky-500 focus:outline-none"
           />
+          <select
+            value={form.check_interval_seconds}
+            onChange={(e) => setForm({ ...form, check_interval_seconds: e.target.value })}
+            className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 focus:border-sky-500 focus:outline-none"
+          >
+            <option value={30}>Every 30s</option>
+            <option value={60}>Every 1 min</option>
+            <option value={300}>Every 5 min</option>
+          </select>
           <button
             type="submit"
             disabled={submitting}

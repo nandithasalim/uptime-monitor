@@ -24,8 +24,15 @@ function StatusPill({ isUp, hasData }) {
   );
 }
 
+function formatInterval(seconds) {
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds % 60 === 0) return `${seconds / 60}min`;
+  return `${seconds}s`;
+}
+
 export default function UrlCard({ url, onDelete }) {
   const [history, setHistory] = useState([]);
+  const [checkingNow, setCheckingNow] = useState(false);
 
   const loadHistory = useCallback(async () => {
     try {
@@ -51,6 +58,18 @@ export default function UrlCard({ url, onDelete }) {
   const latest = url.latest_check;
   const hasData = !!latest;
 
+  const handleCheckNow = async () => {
+    setCheckingNow(true);
+    try {
+      await api.checkNow(url.id);
+      await loadHistory();
+    } catch (e) {
+      // ignore transient errors; the next poll will reconcile state
+    } finally {
+      setCheckingNow(false);
+    }
+  };
+
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-sm">
       <div className="flex items-start justify-between">
@@ -65,13 +84,23 @@ export default function UrlCard({ url, onDelete }) {
             {url.url}
           </a>
         </div>
-        <button
-          onClick={() => onDelete(url.id)}
-          className="text-slate-500 hover:text-rose-400 text-sm shrink-0 ml-3"
-          title="Remove"
-        >
-          ✕
-        </button>
+        <div className="flex items-center gap-2 shrink-0 ml-3">
+          <button
+            onClick={handleCheckNow}
+            disabled={checkingNow}
+            className="text-slate-500 hover:text-sky-400 text-xs disabled:opacity-50"
+            title="Check now"
+          >
+            {checkingNow ? "Checking…" : "Check now"}
+          </button>
+          <button
+            onClick={() => onDelete(url.id)}
+            className="text-slate-500 hover:text-rose-400 text-sm"
+            title="Remove"
+          >
+            ✕
+          </button>
+        </div>
       </div>
 
       <div className="mt-4 flex items-center justify-between">
@@ -86,9 +115,24 @@ export default function UrlCard({ url, onDelete }) {
         </div>
       </div>
 
-      {url.uptime_percent_24h !== null && url.uptime_percent_24h !== undefined && (
-        <div className="mt-2 text-xs text-slate-500">
-          {url.uptime_percent_24h}% uptime (last 24h)
+      <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
+        <span>
+          {url.uptime_percent_24h !== null && url.uptime_percent_24h !== undefined
+            ? `${url.uptime_percent_24h}% uptime (last 24h)`
+            : ""}
+        </span>
+        <span>checks every {formatInterval(url.check_interval_seconds)}</span>
+      </div>
+
+      {url.last_incident && (
+        <div
+          className={`mt-1 text-xs ${
+            !url.last_incident.is_up ? "text-rose-400" : "text-slate-500"
+          }`}
+        >
+          {url.last_incident.is_up
+            ? `Recovered at ${new Date(url.last_incident.changed_at).toLocaleTimeString()}`
+            : `Down since ${new Date(url.last_incident.changed_at).toLocaleTimeString()}`}
         </div>
       )}
 
