@@ -13,7 +13,10 @@ function StatusPill({ isUp, hasData }) {
   }
   return isUp ? (
     <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-medium text-emerald-400">
-      <span className="h-2 w-2 rounded-full bg-emerald-400" />
+      <span className="relative flex h-2 w-2">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+      </span>
       Up
     </span>
   ) : (
@@ -22,6 +25,11 @@ function StatusPill({ isUp, hasData }) {
       Down
     </span>
   );
+}
+
+function borderColor(latest) {
+  if (!latest) return "border-l-slate-700";
+  return latest.is_up ? "border-l-emerald-500" : "border-l-rose-500";
 }
 
 function formatInterval(seconds) {
@@ -71,7 +79,11 @@ export default function UrlCard({ url, onDelete }) {
   };
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-sm">
+    <div
+      className={`rounded-xl border border-l-4 border-slate-800 bg-slate-900 p-5 shadow-sm transition-colors ${borderColor(
+        latest
+      )}`}
+    >
       <div className="flex items-start justify-between">
         <div>
           <h3 className="text-base font-semibold text-slate-100">{url.name}</h3>
@@ -106,10 +118,10 @@ export default function UrlCard({ url, onDelete }) {
       <div className="mt-4 flex items-center justify-between">
         <StatusPill isUp={latest?.is_up} hasData={hasData} />
         <div className="text-right text-sm">
-          <div className="text-slate-200 font-medium">
+          <div className="font-medium text-slate-200 tabular-nums">
             {hasData ? `${Math.round(latest.response_time_ms)} ms` : "—"}
           </div>
-          <div className="text-slate-500 text-xs">
+          <div className="text-xs text-slate-500 tabular-nums">
             {hasData ? `HTTP ${latest.status_code ?? "—"}` : "no checks yet"}
           </div>
         </div>

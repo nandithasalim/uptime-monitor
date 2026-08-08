@@ -43,11 +43,11 @@ function sslLabel(days) {
                       <span className="text-rose-400">Down</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-slate-300">{latest?.status_code ?? "—"}</td>
-                  <td className="px-4 py-3 text-slate-300">
+                  <td className="px-4 py-3 text-slate-300 tabular-nums">{latest?.status_code ?? "—"}</td>
+                  <td className="px-4 py-3 text-slate-300 tabular-nums">
                     {latest?.response_time_ms != null ? `${Math.round(latest.response_time_ms)} ms` : "—"}
                   </td>
-                  <td className="px-4 py-3 text-slate-300">{sslLabel(latest?.ssl_days_remaining)}</td>
+                  <td className="px-4 py-3 text-slate-300 tabular-nums">{sslLabel(latest?.ssl_days_remaining)}</td>
                   <td className="max-w-xs truncate px-4 py-3 text-slate-500" title={latest?.error ?? ""}>
                     {latest?.error ?? "—"}
                   </td>
