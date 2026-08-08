@@ -51,9 +51,9 @@ export default function App() {
       });
       setForm({ name: "", url: "", check_interval_seconds: 60, webhook_url: "" });
       await loadUrls();
+      setError(null);
     } catch (e) {
-      setError("Failed to add URL. Check the console for details.");
-      console.error(e);
+      setError(e.message || "Failed to add URL.");
     } finally {
       setSubmitting(false);
     }
