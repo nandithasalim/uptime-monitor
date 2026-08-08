@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .checker import check_all_urls, ping_url
+from .checker import check_all_urls, ping_url, save_check_and_maybe_alert
 from .database import get_db, init_db
 from .models import Check, URL
 from .schemas import CheckOut, IncidentOut, URLCreate, URLOut
@@ -50,6 +50,7 @@ async def create_url(payload: URLCreate, db: AsyncSession = Depends(get_db)):
         name=payload.name,
         url=payload.url,
         check_interval_seconds=payload.check_interval_seconds,
+        webhook_url=payload.webhook_url,
     )
     db.add(url)
     await db.commit()
@@ -57,8 +58,7 @@ async def create_url(payload: URLCreate, db: AsyncSession = Depends(get_db)):
 
     # Run an immediate check so the new URL doesn't sit with no data for up to 60s
     result = await ping_url(url.url)
-    check = Check(url_id=url.id, **result)
-    db.add(check)
+    await save_check_and_maybe_alert(db, url, result)
     await db.commit()
 
     return await _to_url_out(url.id, db)
@@ -106,15 +106,21 @@ async def check_now(url_id: int, db: AsyncSession = Depends(get_db)):
     if not url:
         raise HTTPException(404, "URL not found")
     result = await ping_url(url.url)
-    check = Check(url_id=url.id, **result)
-    db.add(check)
+    await save_check_and_maybe_alert(db, url, result)
     await db.commit()
     return await _to_url_out(url_id, db)
 
 
 async def _get_last_incident(db: AsyncSession, url_id: int) -> IncidentOut | None:
     """Find the most recent moment this URL's status flipped (up->down or
-    down->up)"""
+    down->up), by walking its recent check history in chronological order and
+    watching for the point where is_up differs from the previous check.
+
+    This is deliberately computed on the fly from existing Check rows rather
+    than stored in its own table: at MVP scale (a few dozen URLs, checked every
+    ~minute) this query is cheap, and it avoids a second table that has to be
+    kept in sync with `checks` every time a status changes.
+    """
     result = await db.execute(
         select(Check.checked_at, Check.is_up)
         .where(Check.url_id == url_id)
@@ -162,6 +168,7 @@ async def _to_url_out(url_id: int, db: AsyncSession, preloaded: URL | None = Non
         name=url.name,
         url=url.url,
         check_interval_seconds=url.check_interval_seconds,
+        webhook_url=url.webhook_url,
         created_at=url.created_at,
         latest_check=CheckOut.model_validate(latest) if latest else None,
         uptime_percent_24h=uptime_pct,

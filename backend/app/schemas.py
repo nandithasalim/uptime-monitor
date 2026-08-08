@@ -6,6 +6,7 @@ class URLCreate(BaseModel):
     name: str
     url: str
     check_interval_seconds: int = 60
+    webhook_url: str | None = None
 
 
 class CheckOut(BaseModel):
@@ -16,6 +17,7 @@ class CheckOut(BaseModel):
     response_time_ms: float | None
     is_up: bool
     error: str | None
+    ssl_days_remaining: int | None
     checked_at: datetime
 
 
@@ -35,6 +37,7 @@ class URLOut(BaseModel):
     name: str
     url: str
     check_interval_seconds: int
+    webhook_url: str | None = None
     created_at: datetime
     latest_check: CheckOut | None = None
     uptime_percent_24h: float | None = None

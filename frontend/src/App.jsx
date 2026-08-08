@@ -1,13 +1,21 @@
 import { useEffect, useState, useCallback } from "react";
 import { api } from "./api";
 import UrlCard from "./UrlCard.jsx";
+import UrlTable from "./UrlTable.jsx";
 
 export default function App() {
   const [urls, setUrls] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [form, setForm] = useState({ name: "", url: "", check_interval_seconds: 60 });
+  const [form, setForm] = useState({
+    name: "",
+    url: "",
+    check_interval_seconds: 60,
+    webhook_url: "",
+  });
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [view, setView] = useState("cards"); // "cards" | "table"
 
   const loadUrls = useCallback(async () => {
     try {
@@ -23,7 +31,8 @@ export default function App() {
 
   useEffect(() => {
     loadUrls();
-    const interval = setInterval(loadUrls, 5000);
+    const interval = setInterval(loadUrls, 2000); // 2s poll: keeps the dashboard
+    // feeling close to real-time without hammering the backend API
     return () => clearInterval(interval);
   }, [loadUrls]);
 
@@ -38,8 +47,9 @@ export default function App() {
         name: form.name.trim(),
         url,
         check_interval_seconds: Number(form.check_interval_seconds),
+        webhook_url: form.webhook_url.trim() || null,
       });
-      setForm({ name: "", url: "", check_interval_seconds: 60 });
+      setForm({ name: "", url: "", check_interval_seconds: 60, webhook_url: "" });
       await loadUrls();
     } catch (e) {
       setError("Failed to add URL. Check the console for details.");
@@ -80,43 +90,88 @@ export default function App() {
 
         <form
           onSubmit={handleSubmit}
-          className="mb-8 flex flex-col gap-3 rounded-xl border border-slate-800 bg-slate-900 p-4 sm:flex-row"
+          className="mb-8 flex flex-col gap-3 rounded-xl border border-slate-800 bg-slate-900 p-4"
         >
-          <input
-            type="text"
-            placeholder="Name (e.g. Example Site)"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm placeholder-slate-500 focus:border-sky-500 focus:outline-none"
-          />
-          <input
-            type="text"
-            placeholder="URL (e.g. https://example.com)"
-            value={form.url}
-            onChange={(e) => setForm({ ...form, url: e.target.value })}
-            className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm placeholder-slate-500 focus:border-sky-500 focus:outline-none"
-          />
-          <select
-            value={form.check_interval_seconds}
-            onChange={(e) => setForm({ ...form, check_interval_seconds: e.target.value })}
-            className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 focus:border-sky-500 focus:outline-none"
-          >
-            <option value={30}>Every 30s</option>
-            <option value={60}>Every 1 min</option>
-            <option value={300}>Every 5 min</option>
-          </select>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <input
+              type="text"
+              placeholder="Name (e.g. Example Site)"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm placeholder-slate-500 focus:border-sky-500 focus:outline-none"
+            />
+            <input
+              type="text"
+              placeholder="URL (e.g. https://example.com)"
+              value={form.url}
+              onChange={(e) => setForm({ ...form, url: e.target.value })}
+              className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm placeholder-slate-500 focus:border-sky-500 focus:outline-none"
+            />
+            <select
+              value={form.check_interval_seconds}
+              onChange={(e) => setForm({ ...form, check_interval_seconds: e.target.value })}
+              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 focus:border-sky-500 focus:outline-none"
+            >
+              <option value={30}>Every 30s</option>
+              <option value={60}>Every 1 min</option>
+              <option value={300}>Every 5 min</option>
+            </select>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-400 disabled:opacity-50"
+            >
+              {submitting ? "Adding…" : "Add URL"}
+            </button>
+          </div>
+
           <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-lg bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-400 disabled:opacity-50"
+            type="button"
+            onClick={() => setShowAdvanced((v) => !v)}
+            className="self-start text-xs text-slate-500 hover:text-slate-300"
           >
-            {submitting ? "Adding…" : "Add URL"}
+            {showAdvanced ? "− Hide" : "+ Add"} alert webhook (optional)
           </button>
+
+          {showAdvanced && (
+            <input
+              type="text"
+              placeholder="Webhook URL — gets a POST when this URL goes down or recovers"
+              value={form.webhook_url}
+              onChange={(e) => setForm({ ...form, webhook_url: e.target.value })}
+              className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm placeholder-slate-500 focus:border-sky-500 focus:outline-none"
+            />
+          )}
         </form>
 
         {error && (
           <div className="mb-6 rounded-lg border border-rose-800 bg-rose-950/50 px-4 py-3 text-sm text-rose-300">
             {error}
+          </div>
+        )}
+
+        {urls.length > 0 && (
+          <div className="mb-4 flex gap-2">
+            <button
+              onClick={() => setView("cards")}
+              className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
+                view === "cards"
+                  ? "bg-sky-500 text-white"
+                  : "bg-slate-900 text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              Cards
+            </button>
+            <button
+              onClick={() => setView("table")}
+              className={`rounded-lg px-3 py-1.5 text-xs font-medium ${
+                view === "table"
+                  ? "bg-sky-500 text-white"
+                  : "bg-slate-900 text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              Table
+            </button>
           </div>
         )}
 
@@ -126,6 +181,8 @@ export default function App() {
           <div className="rounded-xl border border-dashed border-slate-800 py-12 text-center text-slate-500">
             No URLs yet. Add one above to start monitoring.
           </div>
+        ) : view === "table" ? (
+          <UrlTable urls={urls} onDelete={handleDelete} />
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {urls.map((u) => (

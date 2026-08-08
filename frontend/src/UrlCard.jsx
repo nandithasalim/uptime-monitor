@@ -51,7 +51,7 @@ export default function UrlCard({ url, onDelete }) {
 
   useEffect(() => {
     loadHistory();
-    const interval = setInterval(loadHistory, 5000);
+    const interval = setInterval(loadHistory, 2000);
     return () => clearInterval(interval);
   }, [loadHistory]);
 
@@ -123,6 +123,18 @@ export default function UrlCard({ url, onDelete }) {
         </span>
         <span>checks every {formatInterval(url.check_interval_seconds)}</span>
       </div>
+
+      {latest?.ssl_days_remaining !== null && latest?.ssl_days_remaining !== undefined && (
+        <div
+          className={`mt-1 text-xs ${
+            latest.ssl_days_remaining <= 14 ? "text-amber-400" : "text-slate-500"
+          }`}
+        >
+          {latest.ssl_days_remaining < 0
+            ? "SSL certificate expired"
+            : `SSL expires in ${latest.ssl_days_remaining} days`}
+        </div>
+      )}
 
       {url.last_incident && (
         <div
