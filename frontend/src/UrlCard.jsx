@@ -1,41 +1,32 @@
 import { useEffect, useState, useCallback } from "react";
-import { LineChart, Line, ResponsiveContainer, YAxis, Tooltip } from "recharts";
+import { AreaChart, Area, ResponsiveContainer, YAxis, Tooltip } from "recharts";
 import { api } from "./api";
 
-function StatusPill({ isUp, hasData }) {
-  if (!hasData) {
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-700/50 px-3 py-1 text-xs font-medium text-slate-300">
-        <span className="h-2 w-2 rounded-full bg-slate-400" />
-        Pending
-      </span>
-    );
-  }
-  return isUp ? (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-medium text-emerald-400">
-      <span className="relative flex h-2 w-2">
-        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-        <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-      </span>
-      Up
-    </span>
-  ) : (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/15 px-3 py-1 text-xs font-medium text-rose-400">
-      <span className="h-2 w-2 rounded-full bg-rose-400" />
-      Down
-    </span>
-  );
-}
-
-function borderColor(latest) {
-  if (!latest) return "border-l-slate-700";
-  return latest.is_up ? "border-l-emerald-500" : "border-l-rose-500";
-}
-
 function formatInterval(seconds) {
-  if (seconds < 60) return `${seconds}s`;
-  if (seconds % 60 === 0) return `${seconds / 60}min`;
-  return `${seconds}s`;
+  if (seconds < 60) return `Every ${seconds} seconds`;
+  const mins = Math.round(seconds / 60);
+  return `Every ${mins} ${mins === 1 ? "minute" : "minutes"}`;
+}
+
+function Stat({ label, value, tone = "default" }) {
+  const toneClass =
+    tone === "up"
+      ? "text-emerald-400"
+      : tone === "down"
+      ? "text-rose-400"
+      : tone === "warn"
+      ? "text-amber-400"
+      : "text-slate-100";
+  return (
+    <div>
+      <div className="text-[10px] font-medium uppercase tracking-[0.16em] text-slate-500">
+        {label}
+      </div>
+      <div className={`mt-1.5 font-mono text-lg font-medium tabular-nums ${toneClass}`}>
+        {value}
+      </div>
+    </div>
+  );
 }
 
 export default function UrlCard({ url, onDelete }) {
@@ -65,6 +56,7 @@ export default function UrlCard({ url, onDelete }) {
 
   const latest = url.latest_check;
   const hasData = !!latest;
+  const isUp = latest?.is_up;
 
   const handleCheckNow = async () => {
     setCheckingNow(true);
@@ -78,113 +70,161 @@ export default function UrlCard({ url, onDelete }) {
     }
   };
 
+  const sslDays = latest?.ssl_days_remaining;
+  const sslValue = sslDays == null ? "—" : sslDays < 0 ? "Expired" : `${sslDays}d`;
+  const sslTone = sslDays == null ? "default" : sslDays <= 14 ? "warn" : "default";
+
+  const accent = !hasData ? "bg-slate-600" : isUp ? "bg-emerald-400" : "bg-rose-500";
+  const chartColor = !hasData ? "#64748b" : isUp ? "#34d399" : "#fb7185";
+  const gradientId = `grad-${url.id}`;
+
   return (
     <div
-      className={`rounded-xl border border-l-4 border-slate-800 bg-slate-900 p-5 shadow-sm transition-colors ${borderColor(
-        latest
-      )}`}
+      className={`relative overflow-hidden rounded-2xl border transition-colors ${
+        hasData && !isUp
+          ? "border-rose-900/50 bg-gradient-to-br from-rose-950/30 to-[#0d1211]"
+          : "border-[#1b2320] bg-[#0d1211]"
+      }`}
     >
-      <div className="flex items-start justify-between">
-        <div>
-          <h3 className="text-base font-semibold text-slate-100">{url.name}</h3>
-          <a
-            href={url.url}
-            target="_blank"
-            rel="noreferrer"
-            className="text-sm text-slate-400 hover:text-slate-300 hover:underline break-all"
-          >
-            {url.url}
-          </a>
+      <div className={`absolute inset-y-0 left-0 w-[3px] ${accent}`} />
+
+      <div className="p-5 pl-6">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2 w-2 shrink-0">
+                {hasData && isUp && (
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                )}
+                <span className={`relative inline-flex h-2 w-2 rounded-full ${accent}`} />
+              </span>
+              <h3 className="truncate text-lg font-semibold text-slate-50">{url.name}</h3>
+            </div>
+            <a
+              href={url.url}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1 block truncate text-sm text-slate-500 hover:text-slate-300 hover:underline"
+            >
+              {url.url}
+            </a>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2">
+            <span
+              className={`rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider ${
+                !hasData
+                  ? "bg-slate-800 text-slate-400"
+                  : isUp
+                  ? "bg-emerald-400/10 text-emerald-400"
+                  : "bg-rose-500/10 text-rose-400"
+              }`}
+            >
+              {!hasData ? "Pending" : isUp ? "Up" : "Down"}
+            </span>
+            <button
+              onClick={() => onDelete(url.id)}
+              className="text-slate-600 transition-colors hover:text-rose-400"
+              title="Remove monitor"
+              aria-label={`Remove ${url.name}`}
+            >
+              ✕
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0 ml-3">
+
+        <div className="mt-5 grid grid-cols-4 gap-3">
+          <Stat label="Status" value={hasData ? latest.status_code ?? "—" : "—"} />
+          <Stat
+            label="Latency"
+            value={
+              hasData && latest.response_time_ms != null
+                ? `${Math.round(latest.response_time_ms)}ms`
+                : "—"
+            }
+          />
+          <Stat
+            label="Uptime"
+            value={
+              url.uptime_percent_24h !== null && url.uptime_percent_24h !== undefined
+                ? `${url.uptime_percent_24h}%`
+                : "—"
+            }
+            tone={url.uptime_percent_24h === 100 ? "up" : "default"}
+          />
+          <Stat label="SSL" value={sslValue} tone={sslTone} />
+        </div>
+
+        <div className="mt-4 h-24">
+          {history.length > 1 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={history} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
+                <defs>
+                  <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={chartColor} stopOpacity={0.35} />
+                    <stop offset="100%" stopColor={chartColor} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <YAxis hide domain={["auto", "auto"]} />
+                <Tooltip
+                  contentStyle={{
+                    background: "#0a0f0e",
+                    border: "1px solid #1b2320",
+                    borderRadius: 8,
+                    fontSize: 12,
+                  }}
+                  labelStyle={{ color: "#94a3b8" }}
+                  formatter={(value) => [`${Math.round(value)} ms`, "response time"]}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="ms"
+                  stroke={chartColor}
+                  strokeWidth={2}
+                  fill={`url(#${gradientId})`}
+                  dot={false}
+                  isAnimationActive={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex h-full items-center justify-center text-xs text-slate-600">
+              Collecting data…
+            </div>
+          )}
+        </div>
+
+        {url.last_incident && (
+          <div
+            className={`mt-3 text-xs ${
+              url.last_incident.is_up ? "text-slate-500" : "text-rose-400"
+            }`}
+          >
+            {url.last_incident.is_up
+              ? `Recovered ${new Date(url.last_incident.changed_at).toLocaleTimeString()}`
+              : `Down since ${new Date(url.last_incident.changed_at).toLocaleTimeString()}`}
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between border-t border-[#1b2320] px-6 py-3 text-xs text-slate-500">
+        <span>{formatInterval(url.check_interval_seconds)}</span>
+        <div className="flex items-center gap-3">
           <button
             onClick={handleCheckNow}
             disabled={checkingNow}
-            className="text-slate-500 hover:text-sky-400 text-xs disabled:opacity-50"
-            title="Check now"
+            className="transition-colors hover:text-emerald-400 disabled:opacity-50"
           >
             {checkingNow ? "Checking…" : "Check now"}
           </button>
-          <button
-            onClick={() => onDelete(url.id)}
-            className="text-slate-500 hover:text-rose-400 text-sm"
-            title="Remove"
-          >
-            ✕
-          </button>
+          <span className="tabular-nums">
+            {hasData && !isUp && latest.error
+              ? latest.error.slice(0, 36)
+              : hasData
+              ? `Checked ${new Date(latest.checked_at).toLocaleTimeString()}`
+              : "No checks yet"}
+          </span>
         </div>
-      </div>
-
-      <div className="mt-4 flex items-center justify-between">
-        <StatusPill isUp={latest?.is_up} hasData={hasData} />
-        <div className="text-right text-sm">
-          <div className="font-medium text-slate-200 tabular-nums">
-            {hasData ? `${Math.round(latest.response_time_ms)} ms` : "—"}
-          </div>
-          <div className="text-xs text-slate-500 tabular-nums">
-            {hasData ? `HTTP ${latest.status_code ?? "—"}` : "no checks yet"}
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
-        <span>
-          {url.uptime_percent_24h !== null && url.uptime_percent_24h !== undefined
-            ? `${url.uptime_percent_24h}% uptime (last 24h)`
-            : ""}
-        </span>
-        <span>checks every {formatInterval(url.check_interval_seconds)}</span>
-      </div>
-
-      {latest?.ssl_days_remaining !== null && latest?.ssl_days_remaining !== undefined && (
-        <div
-          className={`mt-1 text-xs ${
-            latest.ssl_days_remaining <= 14 ? "text-amber-400" : "text-slate-500"
-          }`}
-        >
-          {latest.ssl_days_remaining < 0
-            ? "SSL certificate expired"
-            : `SSL expires in ${latest.ssl_days_remaining} days`}
-        </div>
-      )}
-
-      {url.last_incident && (
-        <div
-          className={`mt-1 text-xs ${
-            !url.last_incident.is_up ? "text-rose-400" : "text-slate-500"
-          }`}
-        >
-          {url.last_incident.is_up
-            ? `Recovered at ${new Date(url.last_incident.changed_at).toLocaleTimeString()}`
-            : `Down since ${new Date(url.last_incident.changed_at).toLocaleTimeString()}`}
-        </div>
-      )}
-
-      <div className="mt-4 h-16">
-        {history.length > 1 ? (
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={history}>
-              <YAxis hide domain={["auto", "auto"]} />
-              <Tooltip
-                contentStyle={{ background: "#0f172a", border: "1px solid #1e293b", fontSize: 12 }}
-                labelStyle={{ color: "#94a3b8" }}
-                formatter={(value) => [`${Math.round(value)} ms`, "response time"]}
-              />
-              <Line
-                type="monotone"
-                dataKey="ms"
-                stroke="#38bdf8"
-                strokeWidth={2}
-                dot={false}
-                isAnimationActive={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className="flex h-full items-center justify-center text-xs text-slate-600">
-            Not enough data for chart yet
-          </div>
-        )}
       </div>
     </div>
   );
